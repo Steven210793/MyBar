@@ -14,7 +14,7 @@ const $=id=>document.getElementById(id), KEY='mybar-stock-v2';let stock=JSON.par
 const normalize=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const translations={'white rum':'rhum blanc','dark rum':'rhum ambré','rum':'rhum','lemon juice':'jus de citron jaune','lime juice':'jus de citron vert','simple syrup':'sirop de sucre','mint leaves':'feuilles de menthe','mint':'menthe','orange juice':'jus d’orange','soda water':'eau gazeuse','triple sec':'triple sec','ice':'glace','gin':'gin','vodka':'vodka','whiskey':'whisky','bourbon':'bourbon','tequila':'tequila','sugar':'sucre','lemon':'citron jaune','lime':'citron vert','orange':'orange','ginger beer':'ginger beer','tonic water':'tonic','bitters':'bitter','egg white':'blanc d’œuf','salt':'sel','agave syrup':'sirop d’agave'};
 function fr(s){return translations[normalize(s)]||s||'Ingrédient';}
-const ingredientKey=i=>normalize(fr(i.name));const stockKey=s=>normalize(s.name);
+const ingredientKey=i=>normalize(fr(i.name));const stockKey=s=>normalize(s.linkedIngredient||s.name);
 function amount(i){let a=Number(i.amount);if(!Number.isFinite(a)||a<=0)return null;let u=normalize(i.units);if(u==='ml')return {v:a/10,u:'cl'};if(u==='cl')return {v:a,u:'cl'};if(u==='oz'||u==='fl oz')return {v:a*2.95735,u:'cl'};if(['piece','pieces','whole','unit','units','each'].includes(u))return {v:a,u:'piece'};if(['leaf','leaves'].includes(u))return {v:a,u:'feuille'};if(['g','gram','grams'].includes(u))return {v:a,u:'g'};return {v:a,u:i.units||'unité'};}
 function fmt(n){return Math.round(n*100)/100}
 function available(i){let req=amount(i);if(!req)return false;let total=stock.filter(s=>stockKey(s)===ingredientKey(i)&&s.unit===req.u&&Number(s.qty)>0&&(!s.expiry||s.expiry>=new Date().toISOString().slice(0,10))).reduce((n,s)=>n+Number(s.qty),0);return total+1e-8>=req.v}
@@ -93,11 +93,12 @@ function renderStock(){
    let d=document.createElement('div');d.className='panel line';
    let a=document.createElement('div'),name=document.createElement('b'),meta=document.createElement('div');meta.className='tiny';name.textContent=s.name;
    const alert=s.expiry&&s.expiry<new Date().toISOString().slice(0,10)?' • périmé':'';
-   meta.textContent=fmt(s.qty)+' '+s.unit+(s.expiry?' • '+s.expiry:'')+alert;a.append(name,document.createElement('br'),meta);
+   meta.textContent=fmt(s.qty)+' '+s.unit+(s.linkedIngredient?' • ingrédient : '+s.linkedIngredient:'')+(s.expiry?' • '+s.expiry:'')+alert;a.append(name,document.createElement('br'),meta);
    let actions=document.createElement('div');actions.className='row';
+    let link=document.createElement('button');link.textContent='Associer';link.title='Associer cette bouteille à un ingrédient des cocktails';link.onclick=()=>{let v=prompt('Ingrédient utilisé dans les recettes pour « '+s.name+' » (ex. whisky, gin, bourbon). Laisse vide pour retirer une association.',s.linkedIngredient||'');if(v===null)return;v=v.trim();if(v){const match=catalogIngredients().find(i=>normalize(i.name)===normalize(v));if(!match){alert('Ingrédient inconnu. Cherche son nom exact dans le catalogue.');return}s.linkedIngredient=match.name}else delete s.linkedIngredient;save();renderStock();renderCatalog();render()};
    let edit=document.createElement('button');edit.textContent='Modifier';edit.onclick=()=>{let n=prompt('Quantité actuelle ('+s.unit+')',s.qty);if(n!==null&&n.trim()!==''&&Number.isFinite(Number(n))&&Number(n)>=0){s.qty=Number(n);save();renderStock();renderCatalog();render()}};
    let del=document.createElement('button');del.textContent='✕';del.setAttribute('aria-label','Supprimer '+s.name);del.onclick=()=>{if(confirm('Supprimer '+s.name+' ?')){stock.splice(idx,1);save();renderStock();renderCatalog();render()}};
-   actions.append(edit,del);d.append(a,actions);out.append(d);
+   actions.append(edit,link,del);d.append(a,actions);out.append(d);
   }
  }
 }
@@ -117,7 +118,7 @@ function renderCatalog(){
  host.replaceChildren();
  if(!recipes.length){host.textContent='Le catalogue se remplit au chargement des recettes.';return}
  if(!shown.length){host.textContent='Aucun ingrédient pour ce filtre.';return}
- const max=150;
+ const max=all.length;
  for(const x of shown.slice(0,max)){
   const row=document.createElement('div');row.className='line';
   const label=document.createElement('span');label.textContent=x.name;
@@ -148,7 +149,7 @@ $('catalogSearch').oninput=renderCatalog;
 $('catalogFamily').onchange=renderCatalog;
 $('catalogFilter').onchange=renderCatalog;
 function showShopping(){$('needs').innerHTML='';let suggestions=[...new Set([...stock.filter(s=>Number(s.qty)<=0||s.expiry&&s.expiry<new Date().toISOString().slice(0,10)).map(s=>s.name),...customNeeds])];if(!suggestions.length)$('needs').textContent='Aucun achat à prévoir.';for(let n of suggestions){let d=document.createElement('div');d.className='panel line';d.textContent=n;let b=document.createElement('button');b.textContent='Retirer';b.onclick=()=>{customNeeds=customNeeds.filter(x=>x!==n);localStorage.setItem('mybar-needs',JSON.stringify(customNeeds));showShopping()};d.append(b);$('needs').append(d)}}
-$('add').onclick=()=>{let n=$('product').value.trim(),q=Number($('qty').value);if(!n||!Number.isFinite(q)||q<=0){alert('Indique un nom et une quantité positive.');return}let chosen=$('stockCategory').value,sub=$('stockSubcategory').value;let item={name:n,qty:q,unit:$('unit').value,expiry:$('expiry').value};if(chosen){item.category=chosen;if(sub)item.subcategory=sub}stock.push(item);save();$('product').value='';$('qty').value='';$('expiry').value='';renderStock();render()};
+$('add').onclick=()=>{let n=$('product').value.trim(),q=Number($('qty').value);if(!n||!Number.isFinite(q)||q<=0){alert('Indique un nom et une quantité positive.');return}let chosen=$('stockCategory').value,sub=$('stockSubcategory').value;let item={name:n,qty:q,unit:$('unit').value,expiry:$('expiry').value};if(chosen){item.category=chosen;if(sub)item.subcategory=sub}stock.push(item);save();$('product').value='';$('qty').value='';$('expiry').value='';renderStock();renderCatalog();render()};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));$(b.dataset.tab).classList.remove('hidden');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('browseControls').classList.toggle('hidden',b.dataset.tab!=='cocktails');if(b.dataset.tab==='shopping')showShopping()});$('search').oninput=render;$('base').onchange=render;$('sort').onchange=render;
 $('export').onclick=()=>{let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(stock,null,2)],{type:'application/json'}));a.download='mybar-stock.json';a.click()};$('import').onchange=async e=>{try{let j=JSON.parse(await e.target.files[0].text());if(!Array.isArray(j))throw Error();stock=j;save();renderStock();renderCatalog();render();alert('Stock importé')}catch{alert('Fichier invalide')}};
 async function load(){try{let cache=localStorage.getItem('mybar-recipes-v2');if(cache){recipes=JSON.parse(cache);render();renderCatalog();return}let tree=await(await fetch('https://api.github.com/repos/bar-assistant/data/git/trees/v5?recursive=1')).json();let paths=(tree.tree||[]).map(x=>x.path).filter(p=>/^data\/cocktails\/[^/]+\/data\.json$/.test(p));if(!paths.length)throw Error('Catalogue indisponible');$('loading').textContent='Récupération des '+paths.length+' recettes…';let next=0,ok=0;await Promise.all(Array.from({length:12},async()=>{while(next<paths.length){let p=paths[next++];try{let j=await(await fetch('https://raw.githubusercontent.com/bar-assistant/data/v5/'+p)).json();let slug=p.split('/')[2];recipes.push({name:j.name,id:slug,ingredients:j.ingredients||[],images:(j.images||[]).map(i=>'https://raw.githubusercontent.com/bar-assistant/data/v5/data/cocktails/'+slug+'/'+String(i.uri||'').replace('file:///',''))});ok++}catch{}if(ok%40===0){$('loading').textContent=ok+'/'+paths.length+' recettes récupérées';render()}}}));localStorage.setItem('mybar-recipes-v2',JSON.stringify(recipes));render();renderCatalog()}catch(e){$('loading').textContent='Erreur de chargement : '+e.message+'. Vérifie ta connexion.'}}
