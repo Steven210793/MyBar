@@ -1,0 +1,20 @@
+{
+  "id": "/MyBar/",
+  "name": "MyBar",
+  "short_name": "MyBar",
+  "description": "Cocktails et gestion de ma cave",
+  "lang": "fr",
+  "start_url": "/MyBar/",
+  "scope": "/MyBar/",
+  "display": "standalone",
+  "background_color": "#100f12",
+  "theme_color": "#121114",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
