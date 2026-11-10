@@ -105,5 +105,6 @@ async function loadVodkaPhotos(){
  }
  if(currentId&&document.querySelector('#detail:not(.hidden)'))showDetail(currentId);
 }
-\n(async()=>{try{db=await openDB();await readAll();await seedVodkaWhenEmpty();rebuildLibrary();renderCards();loadVodkaPhotos()}catch(e){alert('Le stockage local est indisponible sur ce navigateur : '+e.message)}})();
+
+(async()=>{try{db=await openDB();await readAll();await seedVodkaWhenEmpty();rebuildLibrary();renderCards();loadVodkaPhotos()}catch(e){alert('Le stockage local est indisponible sur ce navigateur : '+e.message)}})();
 </script></body></html>
