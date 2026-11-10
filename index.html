@@ -78,7 +78,19 @@ const compoundFrench={
  'bacon fat-washed bourbon':'bourbon clarifié à la graisse de bacon'
 };
 const capitalFirst=s=>s?s.charAt(0).toLocaleUpperCase('fr-FR')+s.slice(1):s;
-function translateIngredient(s){const key=normalize(s);if(!key)return 'Ingrédient';if(extraFrench[key])return extraFrench[key];if(compoundFrench[key])return compoundFrench[key];if(translations[key])return translations[key];const clean=key.replace(/^fresh /,'').replace(/^organic /,'');if(compoundFrench[clean])return compoundFrench[clean];if(translations[clean])return translations[clean];for(const [suffix,prefix] of Object.entries(ingredientSuffixes)){if(clean.endsWith(suffix)){const base=clean.slice(0,-suffix.length),translated=translations[base];if(translated)return prefix+translated;}}return s;}
+function translateIngredient(s){const key=normalize(s);if(!key)return 'Ingrédient';if(extraFrench[key])return extraFrench[key];if(compoundFrench[key])return compoundFrench[key];if(translations[key])return translations[key];const clean=key.replace(/^fresh /,'').replace(/^organic /,'');if(compoundFrench[clean])return compoundFrench[clean];if(translations[clean])return translations[clean];for(const [suffix,prefix] of Object.entries(ingredientSuffixes)){if(clean.endsWith(suffix)){const base=clean.slice(0,-suffix.length),translated=compoundFrench[base]||translations[base];if(translated)return prefix+translated;}}
+ const transformations=[
+ [/^freshly squeezed (.+) juice$/,'jus de $1 fraîchement pressé'],
+ [/^fresh (.+) juice$/,'jus de $1 frais'],
+ [/^(.+) infused (rum|gin|vodka|bourbon|whiskey|whisky|tequila)$/,'$2 infusé au $1'],
+ [/^(.+) infused (.+)$/,'$2 infusé au $1'],
+ [/^(.+) flavored (.+)$/,'$2 aromatisé au $1'],
+ [/^(.+) flavoured (.+)$/,'$2 aromatisé au $1'],
+ [/^(.+) fat washed (.+)$/,'$2 clarifié à la graisse de $1'],
+ [/^(.+) fat-washed (.+)$/,'$2 clarifié à la graisse de $1']
+ ];
+ for(const [pattern,template] of transformations){const match=clean.match(pattern);if(!match)continue;const first=compoundFrench[match[1]]||translations[match[1]],second=match[2]&&(compoundFrench[match[2]]||translations[match[2]]);if(first&&(!match[2]||second)){return template.replace('$1',first).replace('$2',second||'');}}
+ return s;}
 function fr(s){return capitalFirst(translateIngredient(s));}
 const ingredientKey=i=>normalize(fr(i.name));const stockKey=s=>normalize(s.linkedIngredient||s.name);
 function amount(i){let a=Number(i.amount);if(!Number.isFinite(a)||a<=0)return null;let u=normalize(i.units);if(u==='ml')return {v:a/10,u:'cl'};if(u==='cl')return {v:a,u:'cl'};if(u==='oz'||u==='fl oz')return {v:a*2.95735,u:'cl'};if(['piece','pieces','whole','unit','units','each'].includes(u))return {v:a,u:'piece'};if(['leaf','leaves'].includes(u))return {v:a,u:'feuille'};if(['g','gram','grams'].includes(u))return {v:a,u:'g'};return {v:a,u:i.units||'unité'};}
