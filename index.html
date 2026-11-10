@@ -14,10 +14,12 @@
 <main>
 <section id="home"><div class="home-title"><h2>Bienvenue dans MyBar</h2><p class="muted">Ton carnet personnel de cocktails</p></div><div class="home-buttons">
 <button type="button" data-page="cocktails">Cocktails<small>Voir toutes les recettes</small></button>
+<button type="button" data-page="ingredients">Ingrédients<small>Tous les ingrédients des recettes, par catégorie</small></button>
 <button type="button" data-page="add">Ajouter un cocktail<small>Créer une recette avec photo</small></button>
 <button type="button" data-page="settings">Paramètres<small>Sauvegarder, restaurer et partager</small></button>
 </div></section>
 <section id="cocktails" class="hidden"><h2>Cocktails</h2><input id="search" placeholder="Rechercher un cocktail…" aria-label="Rechercher un cocktail"><label for="alcoholFilter">Filtrer par alcool</label><select id="alcoholFilter"><option value="">Tous les alcools</option><option>Vodka</option><option>Whisky</option><option>Rhum</option><option>Gin</option><option>Tequila</option><option>Mezcal</option><option>Cognac</option><option>Champagne</option><option>Autre</option></select><div id="cards" class="cards"></div><p id="empty" class="muted hidden">Aucun cocktail pour le moment. Ajoute ta première recette depuis l'accueil.</p></section>
+<section id="ingredients" class="hidden"><h2>Ingrédients</h2><p class="muted">Tous les ingrédients utilisés dans tes cocktails, sans doublons.</p><div id="ingredientCatalog"></div></section>
 <section id="detail" class="hidden"><h2 id="detailTitle"></h2><div id="detailPhoto"></div><h3>Ingrédients</h3><div id="detailIngredients"></div><h3>Préparation</h3><p id="detailInstructions"></p><div class="rowactions"><button type="button" id="edit" class="secondary">Modifier</button><button type="button" id="delete" class="ghost">Supprimer</button></div></section>
 <section id="add" class="hidden"><h2 id="formTitle">Ajouter un cocktail</h2>
 <form id="cocktailForm">
@@ -45,7 +47,8 @@ function storeTx(mode,action){return new Promise((resolve,reject)=>{const tx=db.
 async function readAll(){recipes=await storeTx('readonly',s=>s.getAll());recipes.sort((a,b)=>a.name.localeCompare(b.name,'fr'))}
 function persistLibrary(){localStorage.setItem(LIBRARY,JSON.stringify(library))}
 function rebuildLibrary(){const next={Alcool:[],Soft:[],Agrume:[],Autre:[]};for(const recipe of recipes)for(const ing of recipe.ingredients||[]){if(next[ing.category]&&!next[ing.category].some(x=>x.toLowerCase()===ing.name.toLowerCase()))next[ing.category].push(ing.name)}library=next;persistLibrary()}
-function page(id,push=true){if(push&&historyPages.at(-1)!==id)historyPages.push(id);for(const sec of document.querySelectorAll('main>section'))sec.classList.toggle('hidden',sec.id!==id);$('back').classList.toggle('hidden',id==='home');window.scrollTo(0,0);if(id==='cocktails')renderCards()}
+function renderIngredientCatalog(){const box=$('ingredientCatalog');box.innerHTML=categories.map(cat=>{const names=[...(library[cat]||[])].sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));return '<div class="panel"><h3>'+escapeHTML(({Alcool:'Alcools',Soft:'Softs',Agrume:'Agrumes',Autre:'Autres'})[cat])+' <small>('+names.length+')</small></h3>'+(names.length?names.map(name=>'<div class="ingredient"><span>'+escapeHTML(name)+'</span></div>').join(''):'<p class="muted">Aucun ingrédient dans cette catégorie.</p>')+'</div>'}).join('')}
+function page(id,push=true){if(push&&historyPages.at(-1)!==id)historyPages.push(id);for(const sec of document.querySelectorAll('main>section'))sec.classList.toggle('hidden',sec.id!==id);$('back').classList.toggle('hidden',id==='home');window.scrollTo(0,0);if(id==='cocktails')renderCards();if(id==='ingredients')renderIngredientCatalog()}
 $('back').onclick=()=>{if(historyPages.length>1)historyPages.pop();page(historyPages.at(-1)||'home',false)};
 document.querySelectorAll('[data-page]').forEach(el=>el.onclick=()=>{if(el.dataset.page==='add')newCocktail();else page(el.dataset.page)});
 
