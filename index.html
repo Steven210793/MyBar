@@ -78,7 +78,15 @@ const compoundFrench={
  'bacon fat-washed bourbon':'bourbon clarifié à la graisse de bacon'
 };
 const capitalFirst=s=>s?s.charAt(0).toLocaleUpperCase('fr-FR')+s.slice(1):s;
-function translateIngredient(s){const key=normalize(s);if(!key)return 'Ingrédient';if(extraFrench[key])return extraFrench[key];if(compoundFrench[key])return compoundFrench[key];if(translations[key])return translations[key];const clean=key.replace(/^fresh /,'').replace(/^organic /,'');if(compoundFrench[clean])return compoundFrench[clean];if(translations[clean])return translations[clean];for(const [suffix,prefix] of Object.entries(ingredientSuffixes)){if(clean.endsWith(suffix)){const base=clean.slice(0,-suffix.length),translated=compoundFrench[base]||translations[base];if(translated)return prefix+translated;}}
+function translateIngredient(s){const key=normalize(s);if(!key)return 'Ingrédient';if(extraFrench[key])return extraFrench[key];if(compoundFrench[key])return compoundFrench[key];if(translations[key])return translations[key];const clean=key.replace(/^fresh /,'').replace(/^organic /,'');
+ const knownModifiers=[
+ ['freshly squeezed ',' fraîchement pressé'],['fresh ',' frais'],['organic ',' bio'],
+ ['homemade ',' maison'],['smoked ',' fumé'],['aged ',' vieilli'],
+ ['spiced ',' épicé'],['dried ',' séché'],['frozen ',' surgelé'],
+ ['sweetened ',' sucré'],['unsweetened ',' non sucré']
+ ];
+ for(const [prefix,modifier] of knownModifiers){if(key.startsWith(prefix)){const base=key.slice(prefix.length);const translated=compoundFrench[base]||translations[base];if(translated)return translated+modifier;}}
+if(compoundFrench[clean])return compoundFrench[clean];if(translations[clean])return translations[clean];for(const [suffix,prefix] of Object.entries(ingredientSuffixes)){if(clean.endsWith(suffix)){const base=clean.slice(0,-suffix.length),translated=compoundFrench[base]||translations[base];if(translated)return prefix+translated;}}
  const transformations=[
  [/^freshly squeezed (.+) juice$/,'jus de $1 fraîchement pressé'],
  [/^fresh (.+) juice$/,'jus de $1 frais'],
