@@ -42,6 +42,17 @@ const categories=['Alcool','Soft','Agrume','Autre'];
 const STOCK_STORAGE='mybar-stock-v1';
 let stock={};try{stock=JSON.parse(localStorage.getItem(STOCK_STORAGE)||'{}')||{}}catch(e){}
 const threeStarAlcohols=new Set(['whisky','vodka','tequila','rhum blanc','gin','bourbon']);
+function ingredientStarRating(category,name,appearanceCount){
+ const count=Math.max(0,Number(appearanceCount)||0);
+ if(category==='Alcool'){
+  if(threeStarAlcohols.has(name.toLocaleLowerCase('fr')))return 3;
+  return count>=6?2:1;
+ }
+ if(category==='Soft')return count>=9?3:count>=4?2:1;
+ if(category==='Agrume')return count>=26?3:count>=5?2:1;
+ if(category==='Autre')return count>=5?3:count>=2?2:1;
+ return 1;
+}
 function stockKey(cat,name){return cat+'|'+canonicalIngredientName(name).toLocaleLowerCase('fr')}
 function countIngredients(){const result={};for(const recipe of recipes){const keys=new Set((recipe.ingredients||[]).map(i=>stockKey(i.category,i.name.replace(/\s*\(facultatif\)\s*$/i,''))));for(const key of keys)result[key]=(result[key]||0)+1}return result}
 function toggleStock(cat,name){const key=stockKey(cat,name);stock[key]=!stock[key];localStorage.setItem(STOCK_STORAGE,JSON.stringify(stock));renderIngredientCatalog()}
@@ -105,7 +116,7 @@ function renderIngredientCatalog(){
   return '<div class="panel"><h3>'+escapeHTML(({Alcool:'Alcools',Soft:'Softs',Agrume:'Agrumes',Autre:'Autres'})[cat])+' <small>('+names.length+')</small></h3>'+
   (names.length?names.map(name=>{
    const key=stockKey(cat,name),checked=!!stock[key];
-   const stars=cat==='Alcool'?(threeStarAlcohols.has(name.toLowerCase())?3:((counts[key]||0)>=3?2:1)):0;
+   const stars=ingredientStarRating(cat,name,counts[key]||0);
    return '<div class="ingredient catalog-row"><span>'+escapeHTML(name)+(stars?'<span class="stars" aria-label="'+stars+' étoiles">'+('★'.repeat(stars))+'</span>':'')+'</span><button type="button" class="stock-toggle" role="switch" aria-checked="'+checked+'" aria-label="'+escapeHTML(name)+(checked?' en stock':' manquant')+'" data-cat="'+escapeHTML(cat)+'" data-name="'+escapeHTML(name)+'"></button></div>';
   }).join(''):'<p class="muted">Aucun ingrédient dans cette catégorie.</p>')+'</div>';
  }).join('');
