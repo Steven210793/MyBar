@@ -113,7 +113,7 @@ function rebuildLibrary(){const next={Alcool:[],Soft:[],Agrume:[],Autre:[]};for(
 function renderIngredientCatalog(){
  const box=$('ingredientCatalog'),counts=countIngredients();
  box.innerHTML=categories.map(cat=>{
-  const names=[...(library[cat]||[])].sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));
+  const names=[...new Set((library[cat]||[]).map(canonicalIngredientName))].sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));
   return '<div class="panel"><h3>'+escapeHTML(({Alcool:'Alcools',Soft:'Softs',Agrume:'Agrumes',Autre:'Autres'})[cat])+' <small>('+names.length+')</small></h3>'+
   (names.length?names.map(name=>{
    const key=stockKey(cat,name),checked=!!stock[key];
